@@ -89,7 +89,7 @@ def serve():
     except KeyboardInterrupt:
         server.stop(0)
 
-print("g-Store server is running")
+print("Test GRPc-store server is running")
 
 if __name__ == '__main__':
     serve()
