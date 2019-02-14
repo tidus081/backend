@@ -58,53 +58,51 @@ from multiprocessing import Process
 from gensim.parsing.preprocessing import remove_stopwords
 
 import ins_controller as ic
-import collections 
+import collections
 
 class Model(object):
     def __init__(self):
-        pass
+        self.model = {}
+        self.encode_d, self.decode_d = {}, {} # for classification label
+        self.window, self.timecol = 3, -1 # for time series
+        self.textcol = [] # for text vector
+        self.ocrcol = -1 # for OCR classification
 
     def save_model(self, src, raw_data, window=False, factor=False):
-        # save build_type, lm, mse
-        self.model, self.src ={} ,src
-        self.encode_d, self.decode_d = {}, {}
-        #When we set a model, it will train data and built a model
+        # Save build_type, lm, mse
+        self.src = src
         raw_data = pd.DataFrame(raw_data)
-        #self.headDrop =[]
-        self.header, self.rawdata= [str(i) for i in raw_data.iloc[0,:]], self.empty_filter(raw_data)
-        self.window, self.timecol = 3, -1 # for time series
-        self.textcol = -1 # for text classification
-        self.ocrcol = -1 # for ocr classification
-        self.model_filter() # save model for each columns
+        self.header = [str(i) for i in raw_data.iloc[0,:]]
+        self.rawdata = self.empty_filter(raw_data)
+        self.model_filter() # Run function and save model for each columns
         return self.model
 
     def empty_filter(self, data):
-        # remove rows that contain empty values
-        ginput = pd.DataFrame(data)
-        # remove header
-        ginput = ginput.drop(0)
-        emptylist =[]
-        # remove all empty data
-        for r in range(ginput.shape[0]):
-            for c in range(ginput.shape[1]):
-                if (ginput.iloc[r,c] == ""):
-                    if isinstance(ginput.iloc[2, c], str) or len(set(ginput.iloc[:,c])) <10:
-                        ginput.iloc[r, c] = ginput.iloc[:,c].mode().tolist()[0]
-                        while ginput.iloc[r, c] =="": # if above or below cell is empty, doesn't work
+        # Fill out all empty values for demo
+        # (Remove rows that contain empty values in next system)
+        input = pd.DataFrame(data)
+        input = input.drop(0)  # remove header
+        empty_list =[]
+        for r in range(input.shape[0]):
+            for c in range(input.shape[1]):
+                if (input.iloc[r,c] == ""):
+                    if isinstance(input.iloc[2, c], str) or len(set(input.iloc[:,c])) <10:
+                        input.iloc[r, c] = input.iloc[:,c].mode().tolist()[0]
+                        while input.iloc[r, c] =="": # if above or below cell is empty, doesn't work
                             if r-1 >0:
-                                ginput.iloc[r, c] = ginput.iloc[r-1, c]
+                                input.iloc[r, c] = input.iloc[r-1, c]
                             else:
-                                ginput.iloc[r, c] = ginput.iloc[r+1, c] 
+                                input.iloc[r, c] = input.iloc[r+1, c]
 
-                        print("fill string out:", ginput.iloc[r, c])
+                        print("fill string out:", input.iloc[r, c])
                     else:
-                        #ginput.iloc[r, c] = np.median(ginput.iloc[:,c])
-                        ginput.iloc[r, c] = 0
-                        emptylist.append((r,c))
-        for r,c in emptylist:
-            ginput.iloc[r, c] = ginput.iloc[:,c].mean()
-            print("fill numeric out:", ginput.iloc[r, c])
-        return ginput
+                        #input.iloc[r, c] = np.median(input.iloc[:,c])
+                        input.iloc[r, c] = 0
+                        empty_list.append((r,c))
+        for r,c in empty_list:
+            input.iloc[r, c] = input.iloc[:,c].mean()
+            print("fill numeric out:", input.iloc[r, c])
+        return input
 
     def is_date(self,string):
         try:
@@ -112,89 +110,99 @@ class Model(object):
             return True
         except:
             return False
-    
+
     def is_text(self, sample):
         try:
-            sample = sample.split(" ")
-            if len(sample) > 5:
+            if len(sample.split(" ")) > 5:
                 return True
         except:
             pass
-        '''
-        if len(set(df.iloc[:,c]))>100:
-                type_list.append('text classification')
-                break
-        '''
         return False
-        
-    def type_classifier(self, df):
+
+    def get_column_type_list(self, df):
         # expect dataframe
         type_list = []
+        numeric_ratio_threshold=0.9
         for c in range(df.shape[1]):
             type_count = collections.Counter()
-            for r in range(df.shape[0]):
-                if self.is_text(df.iloc[r,c]):
-                    type_count['text classification'] +=1
-                elif self.is_date(df.iloc[r,c]):
-                    type_count['time'] +=1
-                elif isinstance(df.iloc[r,c], int) or isinstance(df.iloc[r,c], float):
-                    type_count['regression'] +=1
-                else:
-                    type_count['classification'] +=1
-            type_list.append(type_count.most_common(1)[0][0]) # col type
-        return type_list
-        
-    def model_filter(self):
-        # check header contain text or data format is time
-        col = self.rawdata.shape[1]
-        # right now, we should use header for OCR
-        if 'OCR' in self.header:
-            self.ocrcol= self.header.index('OCR')
-            class_col= abs(1-self.ocrcol) # assume we have two columns
-            self.model[class_col] = ['OCR']+ self.train(self.rawdata, class_col, build_type ='OCR')
-        else:
-            type_list = self.type_classifier(self.rawdata) # data filled out by empty_filter 
-            if 'time' in type_list:
-                self.timecol = type_list.index('time')
-                for j in range(col):
-                    self.model[j] = ['time']+ self.train(self.rawdata, j, build_type ='time')
-            elif 'text classification' in type_list:
-                self.textcol=type_list.index('text classification')
-                class_col= abs(1-self.textcol) # assume we have two columns
-                self.model[class_col] =['text classification'] + self.train(self.rawdata, class_col, build_type ='text classification')
+            number_unique_c = len(set(df.iloc[:,c]))
+        # If unique values is equal & less than categorical_ratio_threshold, it is classification
+            if float(number_unique_c)/df.shape[1] <= categorical_ratio_threshold:
+                type_list.append('categorical')
             else:
-                # regression and classification left
-                for i, train_type in enumerate(type_list):
-                    self.model[i] =[train_type] + self.train(self.rawdata, i, build_type =train_type)
-                
-        
+                for r in range(df.shape[0]):
+                    if self.is_date(df.iloc[r,c]):
+                        type_count['time'] +=1
+                    elif isinstance(df.iloc[r,c], int) or isinstance(df.iloc[r,c], float):
+                        type_count['numeric'] +=1
+                    else:
+                        type_count['text'] +=1
+                type_list.append(type_count.most_common(1)[0][0]) # col type
+                if 'text' in type_list:
+                    self.textcol = [i for i, v in enumerate(column_type_list) if v =='text']
+                if 'time' in type_list:
+                    self.timecol = type_list.index('time')
 
-    def train(self, filtered, ycol, build_type = False):
-        lm, x_train, y_train = self.preprocess_train(filtered, ycol, build_type = build_type)
+        return type_list
+
+    def model_filter(self):
+        """ Check each column's type
+
+        1. Check OCR or time type is in the data
+        2. Except that, All cases belong to classification or regression.
+        3. We don't support to predict text
+        """
+        col = self.rawdata.shape[1]
+        column_type_list = self.get_column_type_list(self.rawdata) # Data filled out by empty_filter
+        if 'OCR' in self.header:  # For time being, we should use header for OCR
+            self.ocrcol= self.header.index('OCR')
+            class_col= abs(1-self.ocrcol)  # Assume we have two columns for OCR
+            self.model[class_col] = ['OCR'] + self.train(self.rawdata, class_col, column_type='OCR')
+
+        elif self.timecol > -1:
+            for c in range(col):
+                self.model[c] = ['time'] + self.train(self.rawdata, c, column_type='time')
+
+        else:
+            for c, column_type in enumerate(column_type_list):
+                if column_type != 'text':
+                    self.model[c] = [column_type] + self.train(self.rawdata, c, column_type=column_type)
+
+
+    def train(self, filtered, ycol, column_type=False):
+        lm, x_train, y_train = self.preprocess_train(filtered, ycol, column_type=column_type)
         lm.fit(x_train, y_train)
         y_fit = lm.predict(x_train)
 
-        if (build_type =='regression') or (build_type =='time'):
+        if (column_type == 'numeric') or (column_type == 'time'):
             mse = mean_squared_error(y_train, y_fit)
 
-        elif (build_type == 'classification') or (build_type =='text classification') or (build_type =='OCR'):
+        elif (column_type == 'categorical'):
             y_fit,res = y_fit.astype('int'), 0
             for i in range(len(y_fit)):
                 if y_fit[i] != y_train[i]:
                     res+=1
             mse = res/len(y_train)
+        else:
+            mse = 1 # TO avoid errors
 
         return [lm, mse]
 
-
-    def preprocess_train(self, filtered, ycol, build_type = False, lm=None):
+    def preprocess_train(self, filtered, ycol, column_type=False, lm=None):
         # train data contain x, y data
         x_filtered = filtered.drop(filtered.columns[ycol], axis=1)
-        if build_type=='time':
+        if column_type == 'OCR':
+            x_train, y_train = self.image2doc(x_filtered), self.class_convert(filtered.iloc[:,ycol], ycol)
+            self.rawdata.iloc[:,self.ocrcol] = x_train
+            x_train = self.text2vec(x_train)
+            #lm = SVC(kernel="linear", C=0.025, random_state=101)
+            lm = RandomForestClassifier(n_estimators=70, random_state = 101)
+
+        elif column_type == 'time':
             filtered.iloc[:,self.timecol] = pd.to_datetime(filtered.iloc[:,self.timecol])
             filtered = filtered.sort_values(self.timecol)
             #check we are going to train time column
-            if ycol !=self.timecol:
+            if ycol != self.timecol:
                 time_values, new_feature = filtered.iloc[:,ycol], {}
                 y_train = pd.DataFrame(time_values[self.window:time_values.shape[self.timecol]])
             else:
@@ -204,32 +212,21 @@ class Model(object):
             for i in range(self.window):
                 new_feature[i] = time_values[i:time_values.shape[0]-(self.window-i)].tolist()
             x_train = pd.DataFrame(new_feature)
-            lm=linear_model.LinearRegression()
-
-        elif build_type=='regression':
-            # convert discrete column to dummy variables
-            x_train, y_train = self.dummyProcess(x_filtered), pd.Series(filtered.iloc[:,ycol])
-            lm=linear_model.LinearRegression()
-            # in case, a sklearn algorithm doesn't understand list or panda dataframe
-
-        elif build_type=='classification':
-            x_train, y_train = self.dummyProcess(x_filtered), self.classConvert(filtered.iloc[:,ycol], ycol)
-            lm = linear_model.LogisticRegression()
-            #lm = SVC(kernel="linear", C=0.025, random_state=101)
-
-        elif build_type=='text classification':
-            x_train, y_train = self.text2vec(x_filtered), self.classConvert(filtered.iloc[:,ycol], ycol)
-            #lm = SVC(kernel="linear", C=0.025, random_state=101)
-            lm = RandomForestClassifier(n_estimators=70, random_state = 101)
-
-        elif build_type=='OCR':
-            x_train, y_train = self.image2doc(x_filtered), self.classConvert(filtered.iloc[:,ycol], ycol)
-            self.rawdata.iloc[:,self.ocrcol] = x_train
-            x_train = self.text2vec(x_train)
-            #lm = SVC(kernel="linear", C=0.025, random_state=101)
-            lm = RandomForestClassifier(n_estimators=70, random_state = 101)
+            lm = linear_model.LinearRegression()
         else:
-            return "Don't have this build type yet"
+            x_train = self.feature_process(x_filtered) # Return vectors
+            if column_type == 'numeric':
+                y_train = pd.Series(filtered.iloc[:,ycol])
+                lm = linear_model.LinearRegression()
+
+            elif column_type == 'categorical':
+                y_train = self.class_convert(filtered.iloc[:,ycol], ycol)
+                lm = linear_model.LogisticRegression()
+                # lm = SVC(kernel="linear", C=0.025, random_state=101)
+                # RandomForestClassifier(n_estimators=70, random_state = 101)
+
+            else:
+                return "Don't have this build type yet"
         try:
             print(pd.DataFrame(x_train).iloc[0:3,:])
         except:
@@ -246,7 +243,7 @@ class Model(object):
         return x_train
 
     #without google's pre-trained model
-    def text2vec(self,data):
+    def text2vec(self, data):
         print("text2vec processing")
         '''
         data_list = data.values.tolist()
@@ -284,7 +281,7 @@ class Model(object):
         except:
             return "Vectorization process fail"
 
-    def classConvert(self, raw_class, ycol):
+    def class_convert(self, raw_class, ycol):
         if ycol not in self.encode_d.keys():
             self.encode_d[ycol], self.decode_d[ycol] = {}, {}
         raw_class = raw_class.tolist()
@@ -295,28 +292,35 @@ class Model(object):
         y_train = pd.Series(label).reset_index(drop=True)
         return y_train
 
-    def dummyProcess(self, filtered, ycol=-1, predict=False):
-        # check feature has a categorical variable and normalize uncategorical variables
+    def feature_process(self, filtered, ycol=-1, predict=False):
+        # Convert text to vector and categorical value to dummy variables 
         if ycol > -1 :
-            # for google sheet
+            # For google sheet
             X = filtered.drop(filtered.columns[[ycol]], axis=1)
         else:
-            #for postgreSQL
+            # For postgreSQL
             X = pd.DataFrame(filtered)
-        X.columns = [i for i in range(X.shape[1])]
-        dummy_d ={}
-        #check X has categorical variables
-        for col in range(X.shape[1]):
-            if isinstance(X.iloc[2,col], str):
-                dummy_d[col]=pd.get_dummies(X.iloc[:,col], drop_first=True).reset_index(drop=True)
 
-        X = X.drop(X.columns[list(dummy_d.keys())], axis=1).reset_index(drop=True)
+        X.columns = [i for i in range(X.shape[1])]
+        feature_dict = {}
+        # Input pd.DataFrame
+        for c in range(X.shape[1]):
+            if c in self.textcol:
+                feature_dict[c] = self.text2vec(x_filtered.iloc[:,c])
+
+            elif len(set(X.iloc[:,c])) == 1:
+                feature_dict[c] = pd.get_dummies(X.iloc[:,c]).reset_index(drop=True)
+
+            elif isinstance(X.iloc[2, c], str):
+                feature_dict[c] = pd.get_dummies(X.iloc[:,c], drop_first=True).reset_index(drop=True)
+
+        X = X.drop(X.columns[list(feature_dict.keys())], axis=1).reset_index(drop=True)
         try:
             X = pd.DataFrame(preprocessing.scale(X)).reset_index(drop=True)
         except:
             pass
-        for dummy in dummy_d:
-            X = pd.concat([X, dummy_d[dummy]], axis=1).reset_index(drop=True)
+        for dummy_c in feature_dict:
+            X = pd.concat([X, feature_dict[dummy_c]], axis=1).reset_index(drop=True)
 
         return X
 
@@ -330,10 +334,10 @@ class Model(object):
             print("build type : ", predict_type)
         except:
             return "Unstructured column, Can't predict this column"
-        
-        if col == self.textcol or col == self.ocrcol:
+
+        if col in self.textcol or col == self.ocrcol:
             return "Unstructured column, Can't predict this column"
-        
+
         if (self.src == 'google_sheet') or (self.src == 'postgreSQL'):
             # Test 2. preprocess error such as dimension doesn't match or mixed data type
             try:
@@ -344,7 +348,7 @@ class Model(object):
                 return "Preprocess error, Check test data structure again"
         else:
             return "unsupported source"
-        
+
         # Test 3. test data structure doesn't match train data structure
         try:
             if predict_type=='time':
@@ -357,10 +361,10 @@ class Model(object):
                     if not checker:
                         return "Test data type doesn't match trian data type"
                 '''
-                
+
                 if sum(isinstance(i,str)*1 for i in x_test.iloc[0,:]) >0:
                     return "Can't predict this cell"
-                
+
                 y_predicted = lm.predict(x_test)
                 y_predicted=y_predicted.astype('float')
                 if col !=self.timecol:
@@ -369,11 +373,11 @@ class Model(object):
                     longTime=str(pd.to_datetime(y_predicted[0][0]))
                     longTime = longTime.split(" ")
                     return longTime[0]
-    
+
             elif predict_type=='regression':
                 y_predicted = lm.predict(x_test)
                 return (y_predicted[0]//0.01)/100
-    
+
             elif (predict_type=='classification') or (predict_type=='text classification') or (predict_type=='OCR'):
                 y_predicted = lm.predict(x_test)[0]
                 return self.decode_d[col][int(y_predicted)]
@@ -436,7 +440,7 @@ class Model(object):
                 tmp = self.rawdata
                 x_filtered = tmp.drop(tmp.columns[ycol], axis=1)
                 x_filtered = x_filtered.append(pd.DataFrame(xraw_test, index=list(x_filtered.columns.values)).T )
-                X= self.dummyProcess(x_filtered)
+                X= self.feature_process(x_filtered)
                 x_test = pd.DataFrame(X.iloc[-1,:]).T
 
             elif build_type == 'text classification':
@@ -470,9 +474,9 @@ class Model(object):
             print("build type : ", build_type)
         except:
             return "Unstructured column, Can't detect anomaly this column"
-        
-        
-        
+
+
+
         if (build_type == 'regression') or (build_type == 'time'):
             y_predicted = self.predict(raw_data, col=col)
 
@@ -484,12 +488,12 @@ class Model(object):
                     mse = mse/10**23
                 except:
                     return "Prediction issue, "+y_predicted
-            
+
             # Test 3. predict function return error message
             # predicted value for regression should be float
             if isinstance(y_predicted, str):
                 return "Prediction issue, "+y_predicted
-            
+
             if mse < 0.00001:
                 temp = 10
             else:
@@ -504,7 +508,7 @@ class Model(object):
                 x_test = self.preprocess_predict(raw_data, col, row = row, build_type = build_type)
             except:
                 return "Preprocess error, Check test data structure again"
-            # Test 5. If real value is not in label set, return 100  
+            # Test 5. If real value is not in label set, return 100
             if y_real in self.encode_d[col]:
                 idx = self.encode_d[col][y_real]
                 res = (1 - lm.predict_proba(x_test)[0][idx])*100
