@@ -1,14 +1,36 @@
+import pandas as pd
+import os
+import yaml
 from concurrent import futures
 import time
-import pandas as pd
 import grpc
 #import datastore as dt # for postgre
 import preModel_pb2
 import preModel_pb2_grpc
+
 import ins_controller as ic
 import s3
+
 _ONE_DAY_IN_SECONDS = 60 * 60 * 24
-import os
+
+def load_environment(path):
+    """
+
+    Load environment file from yaml file into python dictionary
+
+    Args:
+        path (str): Relative Path for environment.yaml file
+
+    Returns:
+        (dict): environment in python dict format
+
+    """
+    with open(path, 'r') as f:
+        return yaml.load(f)
+
+ENVIRONMENT = load_environment("environment.yaml")
+
+TMP_CSV_LOCATION = ENVIRONMENT["temporary_location"]["csv"]
 
 class Greeter(preModel_pb2_grpc.GreeterServicer):
     #When we upload object, we need user, file and sheet name

@@ -9,16 +9,34 @@ import time
 import pandas as pd
 import os
 import os.path
-
 import grpc
 import preModel_pb2
 import preModel_pb2_grpc
 import csv
+import yaml
+
 import s3
 
-store_ip = '18.219.104.213:50051'
-model_ip = '18.191.130.215:50052'
-vec_ip ='18.222.67.161:50053'
+def load_environment(path):
+    """
+
+    Load environment file from yaml file into python dictionary
+
+    Args:
+        path (str): Relative Path for environment.yaml file
+
+    Returns:
+        (dict): environment in python dict format
+
+    """
+    with open(path, 'r') as f:
+        return yaml.load(f)
+
+ENVIRONMENT = load_environment("environment.yaml")
+
+store_ip = ENVIRONMENT["URL"]["store"]
+model_ip = ENVIRONMENT["URL"]["model"]
+vec_ip = ENVIRONMENT["URL"]["vec"]
 
 def delete_file(fname):
     if os.path.isfile(fname):
@@ -46,7 +64,7 @@ def file2respon(fname):
     with open(fname, 'rb') as f:
         delete_file(fname)
         while True:
-            piece = f.read(CHUNK_SIZE);
+            piece = f.read(CHUNK_SIZE)
             if len(piece) == 0:
                 return
             yield preModel_pb2.fileReply(buffer=piece)
