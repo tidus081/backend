@@ -1,0 +1,27 @@
+This is a folder for model server.
+
+It includes grpc and prexcel installation instruction
+
+-----------------installation instruction
+1. Install gprc and prexcel python module
+sudo apt-get update
+sudo apt install python3-pip
+python3 -m pip install grpcio
+python3 -m pip install grpcio-tools googleapis-common-protos
+pip3 install numpy pandas sklearn scipy
+pip3 install gensim nltk pillow DateTime pytesseract
+pip3 install cloudpickle==0.5.6 #for sklearn
+
+2. run gRPC server in the background
+a) run a single python script
+nohup python3 model_srv.py &
+
+b) run multiple python script
+nohup bash command.sh
+- command.sh
+python3 model_srv.py &
+python3 model2_srv.py &
+
+c) check error
+nano nohup.out
+ps -ef | grep python3

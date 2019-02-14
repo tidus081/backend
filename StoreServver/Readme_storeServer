@@ -1,0 +1,55 @@
+This is a folder for gRPC server.
+
+It includes gRPC and postgres instruction
+
+-----------------gRPC instruction
+1. Install gprc python module
+sudo apt-get update
+sudo apt install python3-pip
+python3 -m pip install grpcio
+python3 -m pip install grpcio-tools googleapis-common-protos
+
+2. make example.proto file
+syntax = "proto3";
+
+// The greeting service definition.
+service Greeter {
+  // Sends a greeting
+  rpc srcSend (gRequest) returns (gReply) {}
+  rpc userSend (gRequest) returns (gReply) {}
+  rpc dataSend (gRequest) returns (gReply) {}
+}
+
+// The request message containing the user's name.
+message gRequest {
+  string name = 1;
+}
+
+// The response message containing the greetings
+message gReply {
+  string message = 1;
+}
+
+
+3. Generate gRPC code
+python3 -m grpc_tools.protoc -I../../git/grpc --python_out=. --grpc_python_out=. ../../git/grpc/gPrexcel.proto
+and then it will generate example_pb2.py and example_pb2_grpc.py which are used in both client and server
+
+4. first run server.py and test it running client.py
+
+-------------------datastore instruction
+0. build datastore object first
+ex) m = datastore.model()
+
+1. save(src, user, data)
+src : data source
+user : user comes from gRPC-client
+data : data comes from gRPC-client
+it saves data into RDS and doesn't return anything
+
+2. get(src, user)
+return user_table from RDS
+
+3. data is saved
+"/prexcel_demo/user/sheet/data/
+"/prexcel_demo/user/sheet/model/

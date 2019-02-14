@@ -1,0 +1,43 @@
+syntax = "proto3";
+// package model;
+
+// The greeting service definition.
+service Greeter {
+  // basic request and receive
+  rpc pass_data (gRequest) returns (gReply) {}
+
+  // data from flask ins
+  rpc upload_object (stream fileReply) returns (gReply) {}
+
+  // model, predict, anomaly from model ins
+  rpc download_csv (gRequest) returns (stream fileReply) {}
+  rpc download_object (gRequest) returns (stream fileReply) {}
+
+  // request grpc to model instance from flask
+  rpc build_model (gRequest) returns (gReply) {}
+  rpc predict (gRequest) returns (gReply) {}
+  rpc anomaly (gRequest) returns (gReply) {}
+  // vectorization
+  rpc vectorize (gReply) returns (gReply) {}
+}
+
+// The request message
+message gRequest {
+  string src = 1;
+  string sname = 2;
+  string user = 3;
+  string data = 4;
+  string real = 5;
+  string extension = 6;
+}
+
+// The response message
+message gReply {
+  string message = 1;
+}
+
+message fileReply {
+    bytes buffer = 1;
+}
+
+// python3 -m grpc_tools.protoc --proto_path=. --python_out=. --grpc_python_out=. preModel.proto
