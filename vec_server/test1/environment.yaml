@@ -1,0 +1,19 @@
+temporary_location:
+  csv: /tmp/csv
+URL_dev:
+  store: 52.14.1.12:50051
+  model: 52.14.46.7:50052
+URL_demo:
+  store: 
+  model: 52.14.46.7:50052
+  vec: 18.216.9.238:50053
+URL_pro:
+  store: 52.14.1.12:50051
+  model: 52.14.46.7:50052
+  vec: 18.216.9.238:50053
+S3:
+  aws_access_key_id: AKIAIS7XIU5AXHIMQOHQ
+  aws_secret_access_key: 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
+  bucket_dev: test-robbie
+  bucket_demo: ikigai-demo
+  bucket_pro: google-sheet-addon

@@ -4,12 +4,10 @@ import yaml
 from concurrent import futures
 import time
 import grpc
-#import datastore as dt # for postgre
-import preModel_pb2
-import preModel_pb2_grpc
 
-import ins_controller as ic
-import s3
+from utils import preModel_pb2, preModel_pb2_grpc
+from utils import ins_controller as ic
+from utils import s3
 
 _ONE_DAY_IN_SECONDS = 60 * 60 * 24
 

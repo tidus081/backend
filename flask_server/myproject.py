@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify, render_template
 import pandas as pd
-import ins_controller as ic
+from utils import ins_controller as ic
 
 class check:
     user=False
@@ -23,11 +23,8 @@ def data():
             return jsonify("Can't read the data from google sheet.")
 
         print('---request update data') #Send parameter to store instance
-        try:
-            res = ic.client_store(type="pass_data", src=src, pname=pname, sname=sname,
+        res = ic.client_store(type="pass_data", src=src, pname=pname, sname=sname,
                                   user=user, data=str(data), extension='csv')
-        except:
-            return jsonify('Unable to process the request; please try again later.')
 
         print("data received: " + res)
         return jsonify(res)
@@ -44,10 +41,7 @@ def model():
             return jsonify("Can't read the data from google sheet.")
 
         print ('---request build model') #Send parameter to model instance
-        try:
-            res= ic.client_model(type="model", src=src, pname=pname, sname=sname, user=user)
-        except:
-            return jsonify('Unable to process the request; please try again later.')
+        res= ic.client_model(type="model", src=src, pname=pname, sname=sname, user=user)
 
         print("model received: " + res)
         return jsonify(res)
@@ -64,11 +58,8 @@ def predict():
             return jsonify("Can't read the data from google sheet.")
 
         print ('---request prediction') #Send parameter to model instance
-        try:
-            res = ic.client_model(type="predict", src=src, pname=pname,
+        res = ic.client_model(type="predict", src=src, pname=pname,
                                     sname=sname, user=user, data=str(data))
-        except:
-            return jsonify('Unable to process the request; please try again later.')
 
         print("predict received: " + res)
         return jsonify(res)
@@ -89,11 +80,6 @@ def anomaly():
         # forgot to set the MIME type to 'application/json'
         res = ic.client_model(type='anomaly', src=src, pname=pname, sname=sname,
                                 user=user, data="%s"%(data), real="%s"%(real))
-        try:
-            res = ic.client_model(type='anomaly', src=src, pname=pname, sname=sname,
-                                    user=user, data="%s"%(data), real="%s"%(real))
-        except:
-            return jsonify('Unable to process the request; please try again later.')
 
         return jsonify(res)
 

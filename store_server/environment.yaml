@@ -4,3 +4,8 @@ URL:
   store: 52.14.1.12:50051
   model: 52.14.46.7:50052
   vec: 18.216.9.238:50053
+S3:
+  aws_access_key_id: AKIAIS7XIU5AXHIMQOHQ
+  aws_secret_access_key: 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
+
+

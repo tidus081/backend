@@ -15,31 +15,28 @@
 from concurrent import futures
 import time
 import pandas as pd
-import prexcel
-import grpc
-import preModel_pb2
-import preModel_pb2_grpc
-import ins_controller as ic
 import pickle
 import os
+import grpc
+
+from utils import preModel_pb2, preModel_pb2_grpc
+from utils import ins_controller as ic
+import prexcel
 _ONE_DAY_IN_SECONDS = 60 * 60 * 24
 
 
 class Greeter(preModel_pb2_grpc.GreeterServicer):
 
     def build_model(self, request, context):
-        #Parameters don't return errors. At least there are None.
+        # Parameters don't return errors. At least there are None.
         src, pname, sname, user = request.src, request.pname, request.sname, request.user
 
-        #Get data from store instance
+        # Get data from store instance
         print("******get data")
-        #Test1. csv file doesn't exist
-        try:
-            ic.client_store(type="download", src=src, pname=pname, sname=sname, user=user, extension='csv')
-        except:
-            return preModel_pb2.gReply(message="update data first before build model")
+        # Test1. csv file doesn't exist
+        ic.client_store(type="download", src=src, pname=pname, sname=sname, user=user, extension='csv')
         
-        #Test2. Loading csv file fails or building data frame(such as mixed float, str) error occur
+        # Test2. Loading csv file fails or building data frame(such as mixed float, str) error occur
         try:
             fname = "%s_%s_%s.csv"%(user, pname, sname)
             res = pd.read_csv(fname)
@@ -54,25 +51,20 @@ class Greeter(preModel_pb2_grpc.GreeterServicer):
             return preModel_pb2.gReply(message="unstructured data")
 
         #Test3. Error occurs in prexcel script 
-        try:
-            prx_model = prexcel.Model() #Call class in prexcel
-            prx_model.save_model(src, res) #Prexcel train a model and save it as an object
-        except:
-            return preModel_pb2.gReply(message="Can't build a model")
+        prx_model = prexcel.Model() #Call class in prexcel
+        prx_model.save_model(src, res) #Prexcel train a model and save it as an object
+
         
         #Send object to store instance
         print("******send object")
-        try:
-            fname = "%s_%s_%s"%(user, pname, sname)
-            #Test4. Uploading object fails
-            with open(fname, "wb") as f:
-                pickle.dump(prx_model, f)
-                f.close()
-            ic.client_store(type="pass_data", src=src, pname=pname, sname=sname, user=user, extension='object') #Send parameters
-            resData = ic.client_store(type="upload", pname=pname, sname=sname, user=user, extension='object') # Send object file
-            print("Client store-upload : ", resData)
-        except:
-            return preModel_pb2.gReply( message="can't upload object" )
+        fname = "%s_%s_%s"%(user, pname, sname)
+        #Test4. Uploading object fails
+        with open(fname, "wb") as f:
+            pickle.dump(prx_model, f)
+            f.close()
+        ic.client_store(type="pass_data", src=src, pname=pname, sname=sname, user=user, extension='object') #Send parameters
+        resData = ic.client_store(type="upload", pname=pname, sname=sname, user=user, extension='object') # Send object file
+        print("Client store-upload : ", resData)
 
         print ('***build_model process finished')
         ic.delete_file(fname)
@@ -90,21 +82,16 @@ class Greeter(preModel_pb2_grpc.GreeterServicer):
         #Test 2. Downloading object file fail 
         #If error occured when update data&build model or didn't click update data of build model
         fname = "%s_%s_%s"%(user, pname, sname)
-        try:
-            ic.client_store(type="download", src=src, pname=pname, sname=sname, user=user, extension='object')
-            with open(fname, "rb") as f:
-                prediction_model = pickle.load(f)
-                f.close()
-            os.remove(fname)
-        except:
-            return preModel_pb2.gReply(message="Check data structure and Update data&Build model again")
+        ic.client_store(type="download", src=src, pname=pname, sname=sname, user=user, extension='object')
+        with open(fname, "rb") as f:
+            prediction_model = pickle.load(f)
+            f.close()
+        os.remove(fname)
         
         #Prexcel return right result or error message
         #Insert try&except in predict function in Prexcel script
-        try:
-            result = prediction_model.predict(data)
-        except:
-            result = "can't predict value"
+        result = prediction_model.predict(data)
+
         print(result)
         print ('***Predict process finished')
         ic.delete_file(fname)
@@ -128,20 +115,14 @@ class Greeter(preModel_pb2_grpc.GreeterServicer):
         #Test2. Downloading object file fails
         #If error occured when update data&build model or didn't click update data of build model
         fname = "%s_%s_%s"%(user, pname, sname)
-        try:
-            ic.client_store(type="download", src=src, pname=pname, sname=sname, user=user, extension='object')
-            with open(fname, "rb") as f:
-                prx_model = pickle.load(f)
-                f.close()
-        except:
-            return preModel_pb2.gReply(message="Check data structure and Update data&Build model again")
+        ic.client_store(type="download", src=src, pname=pname, sname=sname, user=user, extension='object')
+        with open(fname, "rb") as f:
+            prx_model = pickle.load(f)
+            f.close()
                
         #Prexcel return right result or error message
         #Insert try&except in predict function in Prexcel script
-        try:
-            result = prx_model.anomaly(real,data)
-        except:
-            result = 100
+        result = prx_model.anomaly(real,data)
         print ('***Anomaly process finished')
         ic.delete_file(fname)
         return preModel_pb2.gReply(message=str(result))
