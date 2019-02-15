@@ -19,8 +19,8 @@ import pickle
 import os
 import grpc
 
-from utils import preModel_pb2, preModel_pb2_grpc
-from utils import ins_controller as ic
+import preModel_pb2, preModel_pb2_grpc
+import ins_controller as ic
 import prexcel
 _ONE_DAY_IN_SECONDS = 60 * 60 * 24
 

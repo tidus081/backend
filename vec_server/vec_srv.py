@@ -16,9 +16,9 @@ from collections import namedtuple
 from nltk.tokenize import RegexpTokenizer
 from gensim.parsing.preprocessing import remove_stopwords
 from multiprocessing import Process
-
 import grpc
-from utils import preModel_pb2, preModel_pb2_grpc
+
+import preModel_pb2, preModel_pb2_grpc
 
 _ONE_DAY_IN_SECONDS = 60 * 60 * 24
 

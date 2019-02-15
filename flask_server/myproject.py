@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify, render_template
 import pandas as pd
-from utils import ins_controller as ic
+import ins_controller as ic
 
 class check:
     user=False
