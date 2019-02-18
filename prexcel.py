@@ -140,6 +140,7 @@ class Model(object):
             self.timecol = type_list.index('time')
 
         self.column_type_list = type_list
+        print(self.column_type_list)
 
     def is_date(self, string):
         try:
