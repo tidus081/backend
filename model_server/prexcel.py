@@ -140,6 +140,7 @@ class Model(object):
             self.timecol = type_list.index('time')
 
         self.column_type_list = type_list
+        print(self.column_type_list)
 
     def is_date(self, string):
         try:
@@ -218,7 +219,7 @@ class Model(object):
             x_train, y_train = self.image2doc(
                 x_filtered), self.class_convert(filtered.iloc[:, ycol], ycol)
             self.rawdata.iloc[:, self.ocrcol] = x_train
-            x_train = self.text2vec(x_train, ycol)
+            x_train = self.text2vec(x_train)
             #lm = SVC(kernel="linear", C=0.025, random_state=101)
             lm = RandomForestClassifier(n_estimators=70, random_state=101)
 
@@ -274,17 +275,19 @@ class Model(object):
 
         feature_type_list = self.column_type_list[:ycol] + \
             self.column_type_list[ycol+1:]
-        print(feature_type_list)
+        print("feature process:", feature_type_list)
         X.columns = [i for i in range(X.shape[1])]
         feature_dict = {}
         drop_list = []
         # Input pd.DataFrame
         for c, col_type in enumerate(feature_type_list):
             if col_type == 'text':
-                feature_dict[c] = self.text2vec(X.iloc[:, c], c)
+                print(X.iloc[:, c].values.tolist()[0:2])
+                feature_dict[c] = pd.Series(self.text2vec(X.iloc[:, c].values.tolist()))
                 drop_list.append(c)
 
             elif col_type == 'only':
+                feature_dict[c] = pd.Series([1]*X.shape[0])
                 drop_list.append(c)
 
             elif col_type == 'categorical':
@@ -310,13 +313,12 @@ class Model(object):
         return x_train
 
     # without google's pre-trained model
-    def text2vec(self, data, ycol):
+    def text2vec(self, data_list):
         try:
             # text2vec(self,data):
             # use google pre-trained model for word to vector
             # preprocess raw data and convert text data to feature vector
             # it has one column
-            data_list = data.values.tolist()
             print(data_list[0:2])
             x_train = ic.client_vec(data="%s" % (data_list))
             x_train = eval(x_train)  # vector case
