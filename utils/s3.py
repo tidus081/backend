@@ -3,7 +3,22 @@ from boto3.s3.transfer import S3Transfer
 import yaml
 import ins_controller as ic
 
-ENVIRONMENT = ic.load_environment("environment.yaml")
+def load_environment(path):
+    """
+
+    Load environment file from yaml file into python dictionary
+
+    Args:
+        path (str): Relative Path for environment.yaml file
+
+    Returns:
+        (dict): environment in python dict format
+
+    """
+    with open(path, 'r') as f:
+        return yaml.load(f)
+
+ENVIRONMENT = load_environment("environment.yaml")
 ACCESS_KEY = ENVIRONMENT["S3"]["aws_access_key_id"]
 SECRET_KEY = ENVIRONMENT["S3"]["aws_secret_access_key"]
 # Access to S3 on AWS

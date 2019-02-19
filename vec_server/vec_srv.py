@@ -75,7 +75,7 @@ def serve():
     except KeyboardInterrupt:
         server.stop(0)
 
-print("g-vec server is running")
+print("Test g-vec server is running")
 
 if __name__ == '__main__':
     p = Process(target=serve)

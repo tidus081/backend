@@ -106,7 +106,7 @@ def client_store(type=None, src=None, pname=None, sname=None, user=None, data=No
         # model, predict, anomaly from model ins
         if extension == 'csv':
             fname ="%s_%s_%s.csv"%(user,pname,sname)
-            response = stub.download_csv(preModel_pb2.gRequest(src=src,pname=pname, sname=sname, user=user))
+            response = stub.download_csv(preModel_pb2.gRequest(src=src, pname=pname, sname=sname, user=user))
         elif extension == 'object':
             fname ="%s_%s_%s"%(user,pname,sname)
             response = stub.download_object(preModel_pb2.gRequest(src=src, pname=pname, sname=sname, user=user))

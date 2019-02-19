@@ -120,7 +120,7 @@ class Model(object):
             if number_unique_c == 1:
                 type_list.append('only')
 
-            elif number_unique_c < 10 or float(number_unique_c)/df.shape[1] < categorical_threshold:
+            elif number_unique_c < 15 or float(number_unique_c)/df.shape[1] < categorical_threshold:
                 type_list.append('categorical')
 
             else:
@@ -150,7 +150,7 @@ class Model(object):
 
     def is_text(self, sample):
         try:
-            if len(sample.split(" ")) > 2:
+            if len(sample.split(" ")) > 3:
                 return True
         except:
             pass

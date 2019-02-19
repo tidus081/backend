@@ -7,7 +7,8 @@ if [[ "$OSTYPE" == "linux-gnu" ]]; then
 fi
 
 # Install requirement python libraries for service_base
-pip3 install -r requirements.txt
+pip3 install pandas numpy sklearn gensim pillow scipy DateTime 
+pip3 instal nltk grpcio grpcio-tools
 cp -r utils/* flask_server/
 cp -r utils/* model_server/
 cp -r utils/* store_server/
